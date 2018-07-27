@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 /// <summary>
 /// 三维模型重建中的凹多边形三角剖分，适用于不带空洞的凹多边形
-/// ref: https://blog.csdn.net/huangzengman/article/details/77114082
 /// </summary>
 public static class Triangulation
 {
@@ -263,28 +263,33 @@ public static class Triangulation
     }
 
     /// <summary>
-    /// Gets the index of the hole triangle.
+    /// 画带空洞的mesh，点都需要顺时针顺序
     /// </summary>
-    /// <returns>The hole triangle index.</returns>
-    /// <param name="outPos">Out position.</param>
-    /// <param name="innerPos">Inner position.</param>
+    /// <returns>返回三角形的下标点.</returns>
+    /// <param name="outPos">外圈的点（可以是非矩形） Out position.</param>
+    /// <param name="innerPos">内圈的点（必须凸多边形）Inner position.</param>
     public static List<int> GetHoleTriangleIdx(List<Vector3> outPosList, List<Vector3> innerPosList)
     {
+        int outPosLen = outPosList.Count;
         List<int> idxList = new List<int>();
-        if (innerPosList.Count < 3 || outPosList.Count < 3)
+        if (innerPosList.Count < 3 || outPosLen < 3)
         {
-            Debug.LogError("pos count is to less. out:" + outPosList.Count + ";innder:" + innerPosList.Count);
+            Debug.LogError("pos count is to less. out:" + outPosLen + ";innder:" + innerPosList.Count);
             return idxList;
         }
         bool isCovexPolygon = true;//判断多边形是否是凸多边形
+        //凹点坐标
+        List<int> concaveList = new List<int>();
         for (int searchIndex = 0, len = innerPosList.Count; searchIndex < len; searchIndex++)
         {
             List<Vector3> polygon = new List<Vector3>(innerPosList.ToArray());
             polygon.RemoveAt(searchIndex);
             if (IsPointInsidePolygon(innerPosList[searchIndex], polygon))
             {
+                Debug.Log("凹点：idx:" + searchIndex + ";pos:" + innerPosList[searchIndex]);
                 isCovexPolygon = false;
-                break;
+                concaveList.Add(outPosLen + searchIndex);
+//                break;
             }
             else
             {
@@ -295,89 +300,137 @@ public static class Triangulation
         if (!isCovexPolygon)
         {
             Debug.Log("凹多边形挖洞还没实现");
-            return idxList;
+//            return idxList;
         }
 
-//线段
         List<Vector3> posList = new List<Vector3>();
         posList.AddRange(outPosList);
         posList.AddRange(innerPosList);
 
-
         List<MyLine> lineList = new List<MyLine>();
+        //内圈线段
         for (int i = 0, len = innerPosList.Count; i < len; i++)
         {
-            int startIdx = outPosList.Count + i;
-            int endIdx = i == len - 1 ? outPosList.Count : startIdx + 1;
+            int startIdx = outPosLen + i;
+            int endIdx = i == len - 1 ? outPosLen : startIdx + 1;
             var line = new MyLine{ StartIdx = startIdx, EndIdx = endIdx, StartPos = posList[startIdx], EndPos = posList[endIdx] };
             lineList.Add(line);
         }
 
-        List<Vector3> innerLineList = innerPosList;
-
         Dictionary<int,List<int>> lineIdxDic = new Dictionary<int, List<int>>();
-        for (int outIdx = 0, outLen = outPosList.Count; outIdx < outLen; outIdx++)
+        //已外圈为键，和内圈个点进行连线，进行线段分组
+        for (int outIdx = 0; outIdx < outPosLen; outIdx++)
         {
-            var outPos = outPosList[outIdx];
+            var outPos = posList[outIdx];
             lineIdxDic[outIdx] = new List<int>();
 
             //添加外圈的线段
-            int outNextIdx = outIdx != outLen - 1 ? outIdx + 1 : 0;
+            int outNextIdx = outIdx != outPosLen - 1 ? outIdx + 1 : 0;
             lineIdxDic[outIdx].Add(outNextIdx);
-
 
             for (int inIdx = 0, inLen = innerPosList.Count; inIdx < inLen; inIdx++)
             {
-                var posIdx = outPosList.Count + inIdx;
-                var innerPos = posList[posIdx];
+                var innerPosIdx = outPosLen + inIdx;
+                var innerPos = posList[innerPosIdx];
                 bool isCanAdd = true;
 
                 foreach (var line in lineList)
                 {
-                    //判断是否产生一个线段，且不与已知的线段相交
-                    bool isStand = posIdx != line.StartIdx && posIdx != line.EndIdx && outIdx != line.StartIdx && outIdx != line.EndIdx;
+                    //判断是否产生一个线段，且不与已知的线段不相交
+                    bool isStand = innerPosIdx != line.StartIdx && innerPosIdx != line.EndIdx && outIdx != line.StartIdx && outIdx != line.EndIdx;
+//                    //判断三点共线
+                    if (isStand && concaveList.Contains(innerPosIdx))
+                    {
+                        //凹点&&上一个点是线段的结束点
+                        int preInnerPos = innerPosIdx == outPosLen ? posList.Count - 1 : innerPosIdx - 1;
+                        if (preInnerPos == line.EndIdx)
+                        {
+                            isStand = false;
+                            Debug.Log("凹点&&上一个点是线段的结束点：outpos:" + outIdx + ";inpos:" + innerPosIdx + ";start:" + line.StartIdx + ";end:" + line.EndIdx);
+                        }
+                    }
                     bool isIntersect = LineIntersect(outPos, innerPos, line.StartPos, line.EndPos, isStand);
                     if (isIntersect)
                     {
+                        Debug.Log("不可划线！;outpos:" + outIdx + ";inpos:" + innerPosIdx + ";start:" + line.StartIdx + ";end:" + line.EndIdx);
                         isCanAdd = false;
                         break;
                     }
                 } 
                 if (isCanAdd)
                 {
-                    Debug.Log("可产生的线段;outidx:" + outIdx + ";inidx:" + inIdx);
-//...
+                    Debug.Log("可产生的线段;outidx:" + outIdx + ";inidx:" + innerPosIdx);
                     int startIdx = outIdx;
-                    int endIdx = outPosList.Count + inIdx;
+                    int endIdx = outPosLen + inIdx;
                     var line = new MyLine{ StartIdx = startIdx, EndIdx = endIdx, StartPos = posList[startIdx], EndPos = posList[endIdx] };
                     lineList.Add(line);
-                    lineIdxDic[outIdx].Add(posIdx);
+                    lineIdxDic[outIdx].Add(innerPosIdx);
                 }
             } 
         }
 
-        for (int i = 0, len = outPosList.Count; i < len; i++)
-        {
-            int startIdx = i;
-            int endIdx = i == len - 1 ? 0 : i + 1;
-            var line = new MyLine{ StartIdx = startIdx, EndIdx = endIdx, StartPos = posList[startIdx], EndPos = posList[endIdx] };
-            lineList.Insert(i, line);
-        }
+//        for (int i = 0, len = outPosLen; i < len; i++)
+//        {
+//            int startIdx = i;
+//            int endIdx = i == len - 1 ? 0 : i + 1;
+//            var line = new MyLine{ StartIdx = startIdx, EndIdx = endIdx, StartPos = posList[startIdx], EndPos = posList[endIdx] };
+//            lineList.Insert(i, line);
+//        }
 
-
+        //内圈线段组 
         for (int i = 0, len = innerPosList.Count; i < len; i++)
         {
-            int idx = outPosList.Count + i;
+            int idx = outPosLen + i;
             lineIdxDic[idx] = new List<int>();
-            int nextIdx = i == len - 1 ? outPosList.Count : idx + 1;
+            int nextIdx = i == len - 1 ? outPosLen : idx + 1;
             lineIdxDic[idx].Add(nextIdx);
-           
         }
 
-        //分组
+
+        #region凹点
+        for (int i = 0, len = concaveList.Count; i < len; i++)
+        {
+            int outIdx = concaveList[i];
+            var outPos = posList[outIdx];
+            lineIdxDic[outIdx] = new List<int>();
+
+            for (int inIdx = 0, inLen = innerPosList.Count; inIdx < inLen; inIdx++)
+            {
+                var innerPosIdx = outPosLen + inIdx;
+                if (innerPosIdx == outIdx)
+                    continue;
+                var innerPos = posList[innerPosIdx];
+                bool isCanAdd = true;
+
+
+                foreach (var line in lineList)
+                {
+                    //判断是否产生一个线段，且不与已知的线段不相交
+                    bool isStand = innerPosIdx != line.StartIdx && innerPosIdx != line.EndIdx && outIdx != line.StartIdx && outIdx != line.EndIdx;
+                    bool isIntersect = LineIntersect(outPos, innerPos, line.StartPos, line.EndPos, isStand);
+                    if (isIntersect)
+                    {
+                        Debug.Log("不可划线！;outpos:" + outIdx + ";inpos:" + innerPosIdx + ";start:" + line.StartIdx + ";end:" + line.EndIdx);
+                        isCanAdd = false;
+                        break;
+                    }
+                } 
+                if (isCanAdd)
+                {
+                    Debug.Log("可产生的线段;outidx:" + outIdx + ";inidx:" + innerPosIdx);
+                    int startIdx = outIdx;
+                    int endIdx = outPosLen + inIdx;
+                    var line = new MyLine{ StartIdx = startIdx, EndIdx = endIdx, StartPos = posList[startIdx], EndPos = posList[endIdx] };
+                    lineList.Add(line);
+                    lineIdxDic[outIdx].Add(innerPosIdx);
+                }
+            } 
+        }
+
+        #endregion
+        //查找可以画的三角形
         foreach (var item in lineIdxDic)
         {
-//           item.Key
             var idxs = item.Value;
             foreach (var idx in idxs)
             {
@@ -388,7 +441,8 @@ public static class Triangulation
                 {
                     if (idxs.Contains(idxNext))
                     {
-                        if (idx >= outPosList.Count && idxNext >= outPosList.Count)
+                        //内圈的点需要倒序
+                        if (idx >= outPosLen && idxNext >= outPosLen)
                         {
                             idxList.Add(idxNext);
                             idxList.Add(idx);
@@ -407,7 +461,42 @@ public static class Triangulation
         }
 
         return idxList;
+    }
 
+
+
+    // 判断三点共线函数的实现
+    // 共线返回1
+    // 不共线返回0
+    /// <summary>
+    /// 是否三点共线， 
+    /// </summary>
+    /// <returns><c>true</c> if is3 point on A line the specified a b c; otherwise, <c>false</c>.</returns>
+    /// <param name="a">The alpha component.</param>
+    /// <param name="b">The blue component.</param>
+    /// <param name="c">C.</param>
+    public static bool Is3PointOnALine(Vector3 a, Vector3 b, Vector3 c, bool isInAB = true)
+    {
+        if (isInAB)
+        {
+            var minX = Mathf.Min(a.x, b.x);
+            var maxX = Math.Max(a.x, b.x);
+            if (c.x < minX || c.x > maxX)
+            {
+                return false;
+            }
+        }
+        //
+        float tempy1 = (a.y - b.y);
+        float tempx1 = (a.x - b.x);
+        float tempy2 = (c.y - a.y);
+        float tempx2 = (c.x - a.x);
+        float xp = tempy1 * tempx2;
+        float yp = tempy2 * tempx1;
+        if (Math.Abs(xp - yp) <= 1e-6)
+            return true;
+        else
+            return false;
     }
 
     //叉积

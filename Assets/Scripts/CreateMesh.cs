@@ -149,16 +149,38 @@ public class CreateMesh : MonoBehaviour
         new Vector3(SquareLen, 0, 0),
     };
 
-    private List<Vector3> InnerPosList = new List<Vector3>
-    {
-        new Vector3(1, 1, 0),
-        new Vector3(0.5f, 1.5f, 0),
-        new Vector3(0.3f, 1.8f, 0),
-        new Vector3(1, 2, 0),
-        new Vector3(2, 2, 0),
-        new Vector3(2.5f, 1.5f, 0),  
-        new Vector3(2, 1, 0),
-    };
+    //    private List<Vector3> InnerPosList = new List<Vector3>
+    //    {
+    //        new Vector3(1, 1, 0),
+    //        new Vector3(0.5f, 1.5f, 0),
+    ////        new Vector3(0.3f, 1.8f, 0),
+    //        new Vector3(1, 2, 0),
+    //        new Vector3(2, 2, 0),
+    //        new Vector3(2.5f, 1.5f, 0),  
+    //        new Vector3(2, 1, 0),
+    //    };
+
+        private List<Vector3> InnerPosList = new List<Vector3>
+        {
+            new Vector3(1, 1, 0),
+            new Vector3(1.6f, 1.6f, 0),
+            new Vector3(1, 2, 0),
+            new Vector3(2, 2, 0),
+            new Vector3(1.7f, 1.5f, 0),  
+            new Vector3(2, 1, 0),
+        }
+
+//    private List<Vector3> InnerPosList = new List<Vector3>
+//    {
+//        new Vector3(1, 1, 0),
+//        new Vector3(1, 2, 0),
+//        new Vector3(1.2f, 2, 0),
+//        new Vector3(1.2f, 1.5f, 0),
+//        new Vector3(1.8f, 1.5f, 0),
+//        new Vector3(1.8f, 2, 0),
+//        new Vector3(2, 2, 0),
+//        new Vector3(2, 1, 0),
+//    };
 
     public GameObject CreateMeshTest()
     {
@@ -178,7 +200,13 @@ public class CreateMesh : MonoBehaviour
 //            Debug.Log("idx:" + i + ";pos:" + item.ToString());
 //            i++;
 //        }
-        mesh.triangles = Triangulation.GetHoleTriangleIdx(SquarePosList, InnerPosList).ToArray();
+        var trains = Triangulation.GetHoleTriangleIdx(SquarePosList, InnerPosList);
+
+//        trains.Add(6);
+//        trains.Add(5);
+//        trains.Add(0);
+
+        mesh.triangles = trains.ToArray();
 
 
         mesh.RecalculateNormals();

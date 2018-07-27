@@ -160,27 +160,27 @@ public class CreateMesh : MonoBehaviour
     //        new Vector3(2, 1, 0),
     //    };
 
-        private List<Vector3> InnerPosList = new List<Vector3>
-        {
-            new Vector3(1, 1, 0),
-            new Vector3(1.6f, 1.6f, 0),
-            new Vector3(1, 2, 0),
-            new Vector3(2, 2, 0),
-            new Vector3(1.7f, 1.5f, 0),  
-            new Vector3(2, 1, 0),
-        }
+    private List<Vector3> InnerPosList = new List<Vector3>
+    {
+        new Vector3(1, 1, 0),
+        new Vector3(1.6f, 1.6f, 0),
+        new Vector3(1, 2, 0),
+        new Vector3(2, 2, 0),
+        new Vector3(1.7f, 1.5f, 0),  
+        new Vector3(2, 1, 0),
+    };
 
-//    private List<Vector3> InnerPosList = new List<Vector3>
-//    {
-//        new Vector3(1, 1, 0),
-//        new Vector3(1, 2, 0),
-//        new Vector3(1.2f, 2, 0),
-//        new Vector3(1.2f, 1.5f, 0),
-//        new Vector3(1.8f, 1.5f, 0),
-//        new Vector3(1.8f, 2, 0),
-//        new Vector3(2, 2, 0),
-//        new Vector3(2, 1, 0),
-//    };
+    //    private List<Vector3> InnerPosList = new List<Vector3>
+    //    {
+    //        new Vector3(1, 1, 0),
+    //        new Vector3(1, 2, 0),
+    //        new Vector3(1.2f, 2, 0),
+    //        new Vector3(1.2f, 1.5f, 0),
+    //        new Vector3(1.8f, 1.5f, 0),
+    //        new Vector3(1.8f, 2, 0),
+    //        new Vector3(2, 2, 0),
+    //        new Vector3(2, 1, 0),
+    //    };
 
     public GameObject CreateMeshTest()
     {
